@@ -1,0 +1,16 @@
+{
+  "name": "md-generator",
+  "version": "1.0.0",
+  "description": "Editor Markdown ligero, offline-first, optimizado para alimentar a agentes de IA. PWA instalable en Android/iOS.",
+  "main": "sw.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "sharp": "^0.35.3"
+  }
+}
