@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>MD Feed · Generador Markdown para IA</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel-2:#1c232d;
+    --ink:#e6edf3; --ink-dim:#8b949e; --line:#2d333b;
+    --acc:#7ee787; --acc-ink:#0d1117; --warn:#f0883e;
+    --mono:'SF Mono',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+    --sans:'Inter',system-ui,-apple-system,sans-serif;
+    --sat:env(safe-area-inset-top);
+    --sab:env(safe-area-inset-bottom);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;height:100dvh;overflow:hidden}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    display:flex;flex-direction:column;
+    padding-top:var(--sat);
+    overscroll-behavior:none;
+  }
+  header{
+    padding:14px 16px 10px;border-bottom:1px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+    flex-shrink:0;
+  }
+  header h1{
+    font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em;
+    font-family:var(--mono);
+  }
+  header h1 .dot{color:var(--acc)}
+  header .sub{font-size:11px;color:var(--ink-dim)}
+
+  .fm{
+    border-bottom:1px solid var(--line);background:var(--panel);
+    flex-shrink:0;
+  }
+  .fm-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 16px;cursor:pointer;user-select:none;
+  }
+  .fm-head .label{font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .fm-head .label small{color:var(--ink-dim);font-weight:400}
+  .fm-body{padding:0 16px 14px;display:grid;gap:8px}
+  .fm-body.hidden{display:none}
+  .field{display:grid;gap:4px}
+  .field label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-dim)}
+  .field input{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:13px;
+  }
+  .field input:focus{outline:2px solid var(--acc);outline-offset:-1px;border-color:transparent}
+
+  /* toggle switch */
+  .switch{position:relative;width:40px;height:22px;flex:0 0 auto}
+  .switch input{opacity:0;width:0;height:0;position:absolute}
+  .slider{
+    position:absolute;inset:0;background:var(--line);border-radius:22px;
+    transition:.2s;cursor:pointer;
+  }
+  .slider::before{
+    content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;
+    background:var(--ink-dim);border-radius:50%;transition:.2s;
+  }
+  .switch input:checked + .slider{background:rgba(126,231,135,.25)}
+  .switch input:checked + .slider::before{transform:translateX(18px);background:var(--acc)}
+
+  /* Editor area: toolbar + textarea fill remaining viewport */
+  .editor-wrap{
+    flex:1;display:flex;flex-direction:column;min-height:0;
+    /* dvh fallback: if supported, use it for the flex container */
+    height:100dvh;
+  }
+  .toolbar{
+    display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);
+    overflow-x:auto;scrollbar-width:none;background:var(--panel);
+    flex-shrink:0;
+    /* safe area for landscape or notched devices */
+    padding-left:calc(12px + env(safe-area-inset-left));
+    padding-right:calc(12px + env(safe-area-inset-right));
+  }
+  .toolbar::-webkit-scrollbar{display:none}
+  .tb{
+    flex:0 0 auto;background:var(--panel-2);border:1px solid var(--line);
+    color:var(--ink);border-radius:7px;padding:8px 11px;font-size:13px;
+    font-family:var(--mono);cursor:pointer;transition:.12s;min-width:38px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .tb:active{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);transform:scale(.94)}
+  .tb b{font-weight:800}
+  .tb i{font-style:italic}
+
+  main{flex:1;display:flex;min-height:0;overflow:hidden}
+  textarea{
+    flex:1;width:100%;resize:none;border:none;background:var(--bg);color:var(--ink);
+    font-family:var(--mono);font-size:15px;line-height:1.6;padding:16px;
+    letter-spacing:-.01em;
+  }
+  textarea:focus{outline:none}
+  textarea::placeholder{color:var(--ink-dim);opacity:.6}
+
+  footer{
+    border-top:1px solid var(--line);padding:12px 16px;
+    padding-bottom:calc(12px + var(--sab));
+    display:flex;gap:10px;align-items:center;background:var(--panel);
+    flex-shrink:0;
+  }
+  .meta{font-size:11px;color:var(--ink-dim);font-family:var(--mono);flex:1;line-height:1.4}
+  .btn{
+    border:none;border-radius:9px;padding:11px 16px;font-size:13px;font-weight:600;
+    cursor:pointer;font-family:var(--sans);transition:.12s;white-space:nowrap;
+  }
+  .btn:active{transform:scale(.96)}
+  .btn.ghost{background:var(--panel-2);color:var(--ink);border:1px solid var(--line)}
+  .btn.primary{background:var(--acc);color:var(--acc-ink)}
+
+  .toast{
+    position:fixed;left:50%;bottom:80px;transform:translateX(-50%) translateY(20px);
+    background:var(--panel-2);border:1px solid var(--acc);color:var(--acc);
+    padding:9px 16px;border-radius:20px;font-size:12px;font-family:var(--mono);
+    opacity:0;pointer-events:none;transition:.25s;z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+  <header>
+    <h1>md<span class="dot">·</span>feed</h1>
+    <span class="sub">Markdown listo para tu agente de IA</span>
+  </header>
+
+  <section class="fm">
+    <div class="fm-head" id="fmHead">
+      <span class="label">
+        Front-matter YAML
+        <small id="fmState">activado</small>
+      </span>
+      <label class="switch" onclick="event.stopPropagation()">
+        <input type="checkbox" id="fmToggle" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="fm-body" id="fmBody">
+      <div class="field">
+        <label for="fTitle">Título</label>
+        <input id="fTitle" placeholder="Contexto del proyecto Ravn" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="fTags">Tags <span style="text-transform:none;color:var(--ink-dim)">(separadas por comas)</span></label>
+        <input id="fTags" placeholder="agente, contexto, notas" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="fSource">Fuente <span style="text-transform:none;color:var(--ink-dim)">(opcional)</span></label>
+        <input id="fSource" placeholder="conversación, manual, journal…" autocomplete="off">
+      </div>
+    </div>
+  </section>
+
+  <div class="editor-wrap">
+    <nav class="toolbar" id="toolbar">
+      <button class="tb" data-act="h1">H1</button>
+      <button class="tb" data-act="h2">H2</button>
+      <button class="tb" data-act="h3">H3</button>
+      <button class="tb" data-act="bold"><b>B</b></button>
+      <button class="tb" data-act="italic"><i>I</i></button>
+      <button class="tb" data-act="code">&lt;/&gt;</button>
+      <button class="tb" data-act="codeblock">```</button>
+      <button class="tb" data-act="ul">• —</button>
+      <button class="tb" data-act="ol">1.</button>
+      <button class="tb" data-act="quote">❝</button>
+      <button class="tb" data-act="link">🔗</button>
+      <button class="tb" data-act="table">▦</button>
+      <button class="tb" data-act="hr">──</button>
+    </nav>
+
+    <main>
+      <textarea id="editor" placeholder="Escribe aquí tu contenido en Markdown…
+
+Usa los botones de arriba para dar formato.
+Un solo H1, encabezados descriptivos, secciones claras:
+así tu agente lo trocea (chunking) mejor."></textarea>
+    </main>
+  </div>
+
+  <footer>
+    <span class="meta" id="meta">0 palabras · 0 car.</span>
+    <button class="btn ghost" id="copyBtn">Copiar</button>
+    <button class="btn primary" id="dlBtn">Descargar .md</button>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+const ed = document.getElementById('editor');
+const meta = document.getElementById('meta');
+const toolbar = document.getElementById('toolbar');
+const fmToggle = document.getElementById('fmToggle');
+const fmBody = document.getElementById('fmBody');
+const fmState = document.getElementById('fmState');
+const fmHead = document.getElementById('fmHead');
+
+/* ---- Visual Viewport: keep layout stable when keyboard opens/closes ---- */
+function applyViewportHeight(){
+  const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty('--app-h', vh + 'px');
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', applyViewportHeight);
+  window.visualViewport.addEventListener('scroll', applyViewportHeight);
+}
+applyViewportHeight();
+window.addEventListener('resize', applyViewportHeight);
+
+/* ---- Front-matter toggle ---- */
+function syncFM(){
+  const on = fmToggle.checked;
+  fmBody.classList.toggle('hidden', !on);
+  fmState.textContent = on ? 'activado' : 'desactivado';
+}
+fmToggle.addEventListener('change', syncFM);
+fmHead.addEventListener('click', ()=>{ fmToggle.checked = !fmToggle.checked; syncFM(); });
+syncFM();
+
+/* ---- Insert helpers ---- */
+function wrap(before, after=before){
+  const s = ed.selectionStart, e = ed.selectionEnd;
+  const sel = ed.value.slice(s, e) || '';
+  const txt = before + sel + after;
+  ed.setRangeText(txt, s, e, 'end');
+  if(!sel){ // place cursor between markers
+    const pos = s + before.length;
+    ed.setSelectionRange(pos, pos);
+  }
+  ed.focus(); update();
+}
+function linePrefix(prefix){
+  const s = ed.selectionStart, e = ed.selectionEnd;
+  const val = ed.value;
+  let ls = val.lastIndexOf('\n', s-1)+1;
+  let le = val.indexOf('\n', e); if(le<0) le = val.length;
+  const block = val.slice(ls, le);
+  const lines = block.split('\n').map((l,i)=>{
+    if(prefix==='1. ') return (i+1)+'. '+l.replace(/^\d+\.\s/,'');
+    return prefix + l.replace(/^([#>\-\s]*)/, m => prefix.startsWith('#')?'':m.match(/^[-]\s/)?'':m).replace(/^#+\s/,'');
+  });
+  const out = lines.join('\n');
+  ed.setRangeText(out, ls, le, 'end');
+  ed.focus(); update();
+}
+function insertBlock(text){
+  const s = ed.selectionStart;
+  const val = ed.value;
+  const nlBefore = (s===0 || val[s-1]==='\n') ? '' : '\n';
+  const block = nlBefore + text;
+  ed.setRangeText(block, s, s, 'end');
+  ed.focus(); update();
+}
+
+const actions = {
+  h1: ()=>linePrefix('# '),
+  h2: ()=>linePrefix('## '),
+  h3: ()=>linePrefix('### '),
+  bold: ()=>wrap('**'),
+  italic: ()=>wrap('*'),
+  code: ()=>wrap('`'),
+  codeblock: ()=>{
+    const s=ed.selectionStart,e=ed.selectionEnd,sel=ed.value.slice(s,e);
+    wrapRaw('```\n', '\n```', sel);
+  },
+  ul: ()=>linePrefix('- '),
+  ol: ()=>linePrefix('1. '),
+  quote: ()=>linePrefix('> '),
+  link: ()=>{
+    const s=ed.selectionStart,e=ed.selectionEnd,sel=ed.value.slice(s,e)||'texto';
+    const txt='['+sel+'](url)';
+    ed.setRangeText(txt,s,e,'end');
+    ed.focus();update();
+  },
+  table: ()=>insertBlock('| Columna A | Columna B |\n|-----------|-----------|\n| valor | valor |\n'),
+  hr: ()=>insertBlock('\n---\n')
+};
+function wrapRaw(before,after,sel){
+  const s=ed.selectionStart,e=ed.selectionEnd;
+  ed.setRangeText(before+sel+after,s,e,'end');
+  if(!sel) ed.setSelectionRange(s+before.length,s+before.length);
+  ed.focus();update();
+}
+
+toolbar.addEventListener('click', ev=>{
+  const b = ev.target.closest('.tb'); if(!b) return;
+  actions[b.dataset.act]?.();
+});
+
+/* ---- Word count ---- */
+function update(){
+  const t = ed.value;
+  const words = t.trim() ? t.trim().split(/\s+/).length : 0;
+  meta.textContent = words+' palabra'+(words===1?'':'s')+' · '+t.length+' car.';
+}
+ed.addEventListener('input', update);
+update();
+
+/* ---- Build final .md ---- */
+function slug(s){
+  return (s||'documento').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60) || 'documento';
+}
+function buildMd(){
+  let body = ed.value.replace(/\s+$/,'') + '\n';
+  if(!fmToggle.checked) return {md: body, name: slug(firstHeading(body))};
+  const title = document.getElementById('fTitle').value.trim();
+  const tags = document.getElementById('fTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const source = document.getElementById('fSource').value.trim();
+  const date = new Date().toISOString().slice(0,10);
+  let fm = '---\n';
+  fm += 'title: '+(title||firstHeading(body)||'Documento sin título')+'\n';
+  fm += 'date: '+date+'\n';
+  if(tags.length) fm += 'tags: ['+tags.join(', ')+']\n';
+  if(source) fm += 'source: '+source+'\n';
+  fm += '---\n\n';
+  return {md: fm+body, name: slug(title||firstHeading(body))};
+}
+function firstHeading(t){
+  const m = t.match(/^#\s+(.+)$/m); return m ? m[1].trim() : '';
+}
+
+/* ---- Actions ---- */
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),1600);
+}
+document.getElementById('dlBtn').addEventListener('click', ()=>{
+  const {md,name} = buildMd();
+  const blob = new Blob([md], {type:'text/markdown;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name+'.md';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  toast('Descargado · '+name+'.md');
+});
+document.getElementById('copyBtn').addEventListener('click', async ()=>{
+  const {md} = buildMd();
+  try{
+    await navigator.clipboard.writeText(md);
+    toast('Copiado al portapapeles');
+  }catch{
+    /* fallback: execCommand for older WebView / restricted contexts */
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = md;
+      ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast('Copiado al portapapeles');
+    }catch{
+      toast('No se pudo copiar');
+    }
+  }
+});
+
+/* ---- PWA ---- */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
