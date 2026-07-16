@@ -144,7 +144,7 @@
         <small id="fmState">activado</small>
       </span>
       <label class="switch" onclick="event.stopPropagation()">
-        <input type="checkbox" id="fmToggle" checked>
+        <input type="checkbox" id="fmToggle">
         <span class="slider"></span>
       </label>
     </div>
@@ -341,10 +341,13 @@ function toast(msg){
 }
 document.getElementById('dlBtn').addEventListener('click', ()=>{
   const {md,name} = buildMd();
+  const custom = prompt('Nombre del archivo:', name);
+  if(custom === null) return;
+  const file = custom.trim() || name;
   const blob = new Blob([md], {type:'text/markdown;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = name+'.md';
+  a.download = file+'.md';
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
   toast('Descargado · '+name+'.md');
