@@ -27,18 +27,6 @@
     padding-top:var(--sat);
     overscroll-behavior:none;
   }
-  header{
-    padding:14px 16px 10px;border-bottom:1px solid var(--line);
-    display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
-    flex-shrink:0;
-  }
-  header h1{
-    font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em;
-    font-family:var(--mono);
-  }
-  header h1 .dot{color:var(--acc)}
-  header .sub{font-size:11px;color:var(--ink-dim)}
-
   .fm{
     border-bottom:1px solid var(--line);background:var(--panel);
     flex-shrink:0;
@@ -132,11 +120,6 @@
 </style>
 </head>
 <body>
-  <header>
-    <h1>md<span class="dot">·</span>feed</h1>
-    <span class="sub">Markdown listo para tu agente de IA</span>
-  </header>
-
   <section class="fm">
     <div class="fm-head" id="fmHead">
       <span class="label">
@@ -148,7 +131,7 @@
         <span class="slider"></span>
       </label>
     </div>
-    <div class="fm-body" id="fmBody">
+    <div class="fm-body hidden" id="fmBody">
       <div class="field">
         <label for="fTitle">Título</label>
         <input id="fTitle" placeholder="Contexto del proyecto Ravn" autocomplete="off">
