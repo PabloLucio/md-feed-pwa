@@ -303,7 +303,8 @@ toolbar.addEventListener('click', ev=>{
 function update(){
   const t = ed.value;
   const words = t.trim() ? t.trim().split(/\s+/).length : 0;
-  meta.textContent = words+' palabra'+(words===1?'':'s')+' · '+t.length+' car.';
+  const tokens = t.length ? Math.round(t.length / 3.6) : 0;
+  meta.textContent = words+' palabra'+(words===1?'':'s')+' · '+t.length+' car. · ~'+tokens+' tokens';
 }
 ed.addEventListener('input', update);
 update();
